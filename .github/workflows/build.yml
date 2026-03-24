@@ -86,6 +86,12 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.release_tag }}
           name: Snowify Android ${{ steps.tag.outputs.release_tag }}
+          body: |
+            ## What's new
+            - Fixed the 3-dots (⋮) menu in the Now Playing screen — it now opens a working dropdown with: Go to artist, Add/Remove from Liked Songs, Add to playlist, Sleep timer
+
+            ## Install
+            Download the `.apk` below, enable "Install from unknown sources" on your device, and open the file.
           files: app/build/outputs/apk/release/*.apk
           generate_release_notes: true
           prerelease: ${{ inputs.pre-release || false }}
