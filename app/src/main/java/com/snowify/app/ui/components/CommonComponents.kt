@@ -33,6 +33,7 @@ fun SongCard(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     onLike: (() -> Unit)? = null,
+    onMoreClick: (() -> Unit)? = null,
     onArtistClick: (() -> Unit)? = null,
     showLikeButton: Boolean = true,
     modifier: Modifier = Modifier,
@@ -88,7 +89,15 @@ fun SongCard(
                 )
             }
         }
-        if (showLikeButton && onLike != null) {
+        if (onMoreClick != null) {
+            IconButton(onClick = onMoreClick) {
+                Icon(
+                    Icons.Filled.MoreVert,
+                    contentDescription = "More options",
+                    tint = colors.textSubdued,
+                )
+            }
+        } else if (showLikeButton && onLike != null) {
             LikeButton(isLiked = song.isLiked, onToggle = onLike)
         }
     }

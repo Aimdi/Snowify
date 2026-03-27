@@ -33,6 +33,7 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState
 
+    private var hasLoadedQuickPicks = false
     private var hasLoadedRecommendations = false
     private var hasLoadedNewReleases = false
 
@@ -80,36 +81,55 @@ class HomeViewModel @Inject constructor(
                 val followedArtists = userPreferences.followedArtistsFlow.first()
                 Log.d("HomeVM", "loadHomeFeed: recent=${recentSongsList.size} followed=${followedArtists.size}")
 
-                // Fetch recommended songs (based on most recent track)
+                // Fetch quick picks, recommended songs, and new releases in parallel
+                val quickPicksDeferred = viewModelScope.async {
+                    try {
+                        val homeFeed = songRepository.getHomeFeed()
+                        hasLoadedQuickPicks = true
+                        homeFeed.quickPicks
+                    } catch (e: Exception) {
+                        Log.e("HomeVM", "getHomeFeed (quickPicks) failed", e)
+                        emptyList()
+                    }
+                }
+
                 val seedVideoId = recentSongsList.firstOrNull()?.videoId
-                val recommended = if (seedVideoId != null) {
-                    try {
-                        val related = songRepository.getRelatedSongs(seedVideoId)
-                        val recentIds = recentSongsList.map { it.videoId }.toSet()
-                        hasLoadedRecommendations = true
-                        related.filter { it.videoId !in recentIds }.take(10)
-                    } catch (e: Exception) {
-                        Log.e("HomeVM", "getRelatedSongs failed", e)
-                        emptyList()
-                    }
-                } else emptyList()
+                val recommendedDeferred = viewModelScope.async {
+                    if (seedVideoId != null) {
+                        try {
+                            val related = songRepository.getRelatedSongs(seedVideoId)
+                            val recentIds = recentSongsList.map { it.videoId }.toSet()
+                            hasLoadedRecommendations = true
+                            related.filter { it.videoId !in recentIds }.take(10)
+                        } catch (e: Exception) {
+                            Log.e("HomeVM", "getRelatedSongs failed", e)
+                            emptyList<Song>()
+                        }
+                    } else emptyList()
+                }
 
-                // Fetch new releases from followed artists
-                val newReleases = if (followedArtists.isNotEmpty()) {
-                    try {
-                        val releases = fetchNewReleasesFromFollowed(followedArtists)
-                        hasLoadedNewReleases = true
-                        releases
-                    } catch (e: Exception) {
-                        Log.e("HomeVM", "fetchNewReleases failed", e)
-                        emptyList()
-                    }
-                } else emptyList()
+                val newReleasesDeferred = viewModelScope.async {
+                    if (followedArtists.isNotEmpty()) {
+                        try {
+                            val releases = fetchNewReleasesFromFollowed(followedArtists)
+                            hasLoadedNewReleases = true
+                            releases
+                        } catch (e: Exception) {
+                            Log.e("HomeVM", "fetchNewReleases failed", e)
+                            emptyList<Album>()
+                        }
+                    } else emptyList()
+                }
 
-                Log.d("HomeVM", "Feed: recent=${recentSongsList.size} rec=${recommended.size} releases=${newReleases.size}")
+                val quickPicks = quickPicksDeferred.await()
+                val recommended = recommendedDeferred.await()
+                val newReleases = newReleasesDeferred.await()
+
+                Log.d("HomeVM", "Feed: recent=${recentSongsList.size} quickPicks=${quickPicks.size} rec=${recommended.size} releases=${newReleases.size}")
 
                 _uiState.value = HomeUiState.Success(
                     feed = HomeFeed(
+                        quickPicks = quickPicks,
                         recentlyPlayed = recentSongsList,
                         recommended = recommended,
                         newFromArtists = newReleases,
