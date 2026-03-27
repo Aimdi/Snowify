@@ -113,6 +113,16 @@ data class HomeFeed(
     val trending: List<Song> = emptyList(),
 )
 
+enum class Mood(val label: String, val query: String) {
+    RELAX("Relax", "chill relax music"),
+    SLEEP("Sleep", "sleep calm music"),
+    ENERGIZE("Energize", "workout energize music"),
+    SAD("Sad", "sad emotional songs"),
+    HAPPY("Happy", "happy upbeat music"),
+    FOCUS("Focus", "focus study music"),
+    PARTY("Party", "party dance music"),
+}
+
 enum class RepeatMode { OFF, ALL, ONE }
 
 data class PlaybackState(

@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import coil.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.snowify.app.data.model.Mood
 import com.snowify.app.data.model.Song
 import com.snowify.app.ui.components.*
 import com.snowify.app.ui.theme.SnowifyTheme
@@ -35,6 +36,7 @@ fun HomeScreen(
 ) {
     val colors = SnowifyTheme.colors
     val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+    val selectedMood by homeViewModel.selectedMood.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize().background(colors.bgBase)) {
         Spacer(Modifier.height(24.dp))
@@ -49,6 +51,34 @@ fun HomeScreen(
             Spacer(Modifier.height(12.dp))
             SearchPill(onClick = onSearch)
         }
+
+        // Mood chips
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            items(Mood.values().toList()) { mood ->
+                val isSelected = selectedMood == mood
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) colors.accent else colors.bgElevated,
+                    border = if (!isSelected) androidx.compose.foundation.BorderStroke(
+                        1.dp, colors.textSubdued.copy(alpha = 0.4f)
+                    ) else null,
+                    modifier = Modifier.clickable { homeViewModel.selectMood(mood) },
+                ) {
+                    Text(
+                        text = mood.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (isSelected) colors.bgBase else colors.textPrimary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(4.dp))
 
         when (val state = uiState) {
             is HomeUiState.Loading -> {
@@ -85,7 +115,7 @@ fun HomeScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = "Quick picks",
+                                    text = if (selectedMood != null) selectedMood.label else "Quick picks",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = colors.textPrimary,

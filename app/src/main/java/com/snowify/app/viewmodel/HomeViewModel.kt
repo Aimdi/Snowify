@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.snowify.app.data.local.UserPreferences
 import com.snowify.app.data.model.Album
 import com.snowify.app.data.model.HomeFeed
+import com.snowify.app.data.model.Mood
 import com.snowify.app.data.model.Song
 import com.snowify.app.data.repository.SongRepository
 import com.snowify.app.util.getGreeting
@@ -36,6 +37,10 @@ class HomeViewModel @Inject constructor(
     private var hasLoadedQuickPicks = false
     private var hasLoadedRecommendations = false
     private var hasLoadedNewReleases = false
+    private var originalQuickPicks: List<Song> = emptyList()
+
+    private val _selectedMood = MutableStateFlow<Mood?>(null)
+    val selectedMood: StateFlow<Mood?> = _selectedMood
 
     init {
         // Initial load — show recently played immediately
@@ -126,6 +131,7 @@ class HomeViewModel @Inject constructor(
                 val newReleases = newReleasesDeferred.await()
 
                 Log.d("HomeVM", "Feed: recent=${recentSongsList.size} quickPicks=${quickPicks.size} rec=${recommended.size} releases=${newReleases.size}")
+                originalQuickPicks = quickPicks
 
                 _uiState.value = HomeUiState.Success(
                     feed = HomeFeed(
@@ -139,6 +145,27 @@ class HomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("HomeVM", "loadHomeFeed failed", e)
                 _uiState.value = HomeUiState.Error(e.message ?: "Failed to load")
+            }
+        }
+    }
+
+    fun selectMood(mood: Mood) {
+        viewModelScope.launch {
+            val current = _uiState.value as? HomeUiState.Success ?: return@launch
+            if (_selectedMood.value == mood) {
+                // Deselect — restore original quick picks
+                _selectedMood.value = null
+                _uiState.value = current.copy(feed = current.feed.copy(quickPicks = originalQuickPicks))
+            } else {
+                _selectedMood.value = mood
+                try {
+                    val results = songRepository.search(mood.query)
+                    val moodSongs = results.songs.take(12)
+                    val updated = _uiState.value as? HomeUiState.Success ?: return@launch
+                    _uiState.value = updated.copy(feed = updated.feed.copy(quickPicks = moodSongs))
+                } catch (e: Exception) {
+                    Log.e("HomeVM", "selectMood failed for ${mood.label}", e)
+                }
             }
         }
     }
