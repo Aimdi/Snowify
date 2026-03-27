@@ -89,7 +89,11 @@ jobs:
           tag_name: ${{ steps.tag.outputs.release_tag }}
           name: Snowify Android ${{ steps.tag.outputs.release_tag }}
           body: |
-            ## What's new
+            ## What's new in 1.1.0
+            - **Quick picks** — personalised song recommendations from your YouTube Music home feed appear at the top of the home screen, with a "Play all" button to start the full queue instantly
+            - **Mood board** — horizontal chip row (Relax, Sleep, Energize, Sad, Happy, Focus, Party) lets you filter Quick Picks by mood; tap a chip to load mood-matched songs, tap again to restore your regular picks
+
+            ## Previous changes
             - Fixed the 3-dots (⋮) menu in the Now Playing screen — it now opens a working dropdown with: Go to artist, Add/Remove from Liked Songs, Add to playlist, Sleep timer
 
             ## Install
